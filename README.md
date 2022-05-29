@@ -1,10 +1,12 @@
+# untested py3 port, used black formatter 
+# https://github.com/psf/black
+
 A linux tool for simple usage of the MSR605 magnet stripe reader/writer
 
-
 USAGE:
-
+```
     ./msrtool.py /dev/ttyUSB0
-
+```
 
 You should have write access to the serial port, so you either run this as
 root or add yourself to the dialout group (or whatever group your linux
