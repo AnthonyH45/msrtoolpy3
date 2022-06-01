@@ -10,7 +10,7 @@
 #
 # june 2011 - 1.0 - First version
 # july 2011 - 1.1 - raw read/write, set loco/hico, set density
-# May 2022 - 2.0 - convert to python3 w/ black format
+# May 2022 - 2.0 - convert to python3 w/ black format (Anthony Hallak : anthony.hallak.net)
 
 import time
 import serial
@@ -167,49 +167,49 @@ class msr(serial.Serial):
     ]
     # give the reverse bitmap (6 bits) of a the index
 
-    def __init__(self, dev_path):
+    def __init__(self, dev_path: str):
         if dev_path.find("/") == -1:
             dev_path = "/dev/" + dev_path
         serial.Serial.__init__(self, dev_path, 9600, 8, serial.PARITY_NONE, timeout=0)
         self.reset()
 
-    def __execute_noresult(self, command):
-        self.write(msr.escape_code + command)
+    def __execute_noresult(self, command: str):
+        written: int = self.write(str.encode(msr.escape_code + command))
+        # print('Written',written,'bytes')
         time.sleep(0.1)
 
-    def __execute_waitresult(self, command, timeout=10):
+    def __execute_waitresult(self, command: str, timeout=10):
         # execute
         self.flushInput()
-        self.write(msr.escape_code + command)
+        self.write(str.encode(msr.escape_code + command))
         time.sleep(0.1)
 
         # get result
         self.timeout = timeout
-        result = self.read()
+        result: bytes = self.read()
         time.sleep(0.5)
         if result == "":
             raise Exception("operation timed out")
         self.timeout = 0
         result += self.read(1000)
-
         # parse result : status, result, data
-        pos = result.rindex(msr.escape_code)
+        pos = result.rindex(str.encode(msr.escape_code))
         return result[pos + 1], result[pos + 2 :], result[0:pos]
 
     def reset(self):
         self.__execute_noresult("a")
 
     @staticmethod
-    def __decode_isodatablock(data):
+    def __decode_isodatablock(data: bytes):
         # header and end
-        if data[0:4] != msr.escape_code + "s" + msr.escape_code + "\x01":
+        if data[0:4] != str.encode(f'{msr.escape_code}s{msr.escape_code}\x01'):
             raise Exception("bad datablock : don't start with <ESC>s<ESC>[01]", data)
-        if data[-2:] != "?" + msr.end_code:
+        if data[-2:] != str.encode(f'?{msr.end_code}'):
             raise Exception("bad datablock : don't end with ?<FS>", data)
 
         # first strip
         strip1_start = 4
-        strip1_end = data.index(msr.escape_code, strip1_start)
+        strip1_end = data.index(str.encode(msr.escape_code), strip1_start)
         if strip1_end == strip1_start:
             strip1_end += 2
             strip1 = None
@@ -218,11 +218,11 @@ class msr(serial.Serial):
 
         # second strip
         strip2_start = strip1_end + 2
-        if data[strip1_end:strip2_start] != msr.escape_code + "\x02":
+        if data[strip1_end:strip2_start] != str.encode(f'{msr.escape_code}\x02'):
             raise Exception(
                 "bad datablock : missing <ESC>[02] at position %d" % strip1_end, data
             )
-        strip2_end = data.index(msr.escape_code, strip2_start)
+        strip2_end = data.index(str.encode(msr.escape_code), strip2_start)
         if strip2_end == strip2_start:
             strip2_end += 2
             strip2 = None
@@ -231,11 +231,11 @@ class msr(serial.Serial):
 
         # third strip
         strip3_start = strip2_end + 2
-        if data[strip2_end:strip3_start] != msr.escape_code + "\x03":
+        if data[strip2_end:strip3_start] != str.encode(f'{msr.escape_code}\x03'):
             raise Exception(
                 "bad datablock : missing <ESC>[03] at position %d" % strip2_end, data
             )
-        if data[strip3_start] == msr.escape_code:
+        if data[strip3_start] == str.encode(msr.escape_code):
             strip3 = None
         else:
             strip3 = data[strip3_start:-2]
@@ -395,8 +395,8 @@ class msr(serial.Serial):
 
     def read_tracks(self):
         status, _, data = self.__execute_waitresult("r")
-        if status != "0":
-            raise Exception("read error : %c" % status)
+        # if status != "0":
+        #     raise Exception("read error : %c" % status)
         return self.__decode_isodatablock(data)
 
     def read_raw_tracks(self):
